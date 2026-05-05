@@ -4,7 +4,6 @@ Descargador Universal de Videos - app.py
 Aplicación Streamlit para descargar videos de Instagram, YouTube y TikTok.
 Utiliza yt-dlp como motor de descarga unificado para las 3 plataformas.
 
-Autor: Auto-generado
 Versión: 2.0
 """
 
