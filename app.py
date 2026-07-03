@@ -99,13 +99,15 @@ def get_platform_color(platform: str) -> str:
     return colors.get(platform, "#666666")
 
 
-def download_video(url: str, platform: str) -> dict:
+def download_video(url: str, platform: str, cookiefile: str | None = None) -> dict:
     """
     Descarga un video utilizando yt-dlp con configuración optimizada por plataforma.
 
     Args:
         url: URL del video a descargar.
         platform: Plataforma detectada ('Instagram', 'YouTube', 'TikTok').
+        cookiefile: Ruta a un archivo de cookies en formato Netscape (opcional).
+            Necesario para contenido de Instagram que requiere sesión iniciada.
 
     Returns:
         Diccionario con 'success' (bool), 'path' (str o None),
@@ -133,6 +135,11 @@ def download_video(url: str, platform: str) -> dict:
                 'Accept-Language': 'en-US,en;q=0.9',
             },
         }
+
+        # Cookies: necesarias en servidores remotos porque --cookies-from-browser
+        # no tiene acceso al navegador del usuario. Se pasa un cookiefile explícito.
+        if cookiefile:
+            options['cookiefile'] = cookiefile
 
         # Configuración específica por plataforma
         if platform == "Instagram":
@@ -493,6 +500,27 @@ def render_sidebar():
 
         st.divider()
 
+        st.markdown("### 🍪 Cookies (Instagram)")
+        st.caption(
+            "Si Instagram devuelve 'empty media response', sube un archivo "
+            "cookies.txt (formato Netscape) exportado de tu navegador logueado."
+        )
+        cookies_upload = st.file_uploader(
+            "Archivo cookies.txt",
+            type=["txt"],
+            key="cookies_uploader",
+            label_visibility="collapsed",
+        )
+        if cookies_upload is not None:
+            os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+            cookies_path = os.path.join(DOWNLOAD_DIR, "cookies.txt")
+            with open(cookies_path, "wb") as f:
+                f.write(cookies_upload.getbuffer())
+            st.session_state["cookiefile_path"] = cookies_path
+            st.success("✅ Cookies cargadas para esta sesión")
+
+        st.divider()
+
         st.markdown("### 🧹 Limpieza")
         if st.button("🗑️ Eliminar archivos descargados", use_container_width=True):
             if cleanup_downloads():
@@ -582,7 +610,11 @@ def main():
                 unsafe_allow_html=True,
             )
 
-            result = download_video(url, detected_platform)
+            result = download_video(
+                url,
+                detected_platform,
+                cookiefile=st.session_state.get("cookiefile_path"),
+            )
 
             progress_placeholder.empty()
 
